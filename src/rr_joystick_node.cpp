@@ -48,7 +48,10 @@ namespace rrobot::rr_joystick
         (void)state;
         return CallbackReturn::SUCCESS;
     }
-
+    
+    // when invalid is recieved callback will call trigger_error_transition(), this will
+    // a state change, and it will be update to lifecycle node to determine what to do with
+    // the event.
     void RrJoystickNode::publish_callback()
     {
     }

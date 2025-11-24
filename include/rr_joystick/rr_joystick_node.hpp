@@ -56,9 +56,7 @@ namespace rrobot
             CallbackReturn on_cleanup(const rclcpp_lifecycle::State &state) override;
 
           private:
-            // when invalid is recieved callback will call trigger_error_transition(), this will
-            // a state change, and it will be update to lifecycle node to determine what to do with
-            // the event.
+
             void publish_callback();
             rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Joy>::SharedPtr publisher_ = nullptr;
         };
