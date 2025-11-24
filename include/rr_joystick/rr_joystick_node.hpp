@@ -1,24 +1,68 @@
+// Copyright (c) 2025 Ryder Robots
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #ifndef RR_JOYSTICK__RR_JOYSTICK_HPP_
 #define RR_JOYSTICK__RR_JOYSTICK_HPP_
 
-#include "rr_joystick/visibility_control.h"
-#include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rr_joystick/visibility_control.h"
+#include "sensor_msgs/msg/joy.hpp"
+#include <rclcpp_components/register_node_macro.hpp>
 
-namespace rrobot {
-namespace rr_joystick
+namespace rrobot
 {
+    namespace rr_joystick
+    {
 
-class RrJoystickNode : rclcpp_lifecycle::LifecycleNode
-{
-public:
-  explicit RrJoystickNode(const std::string & node_name = "rr_joystick_node", bool intra_process_comms = true): 
-    rclcpp_lifecycle::LifecycleNode(node_name,
-    rclcpp::NodeOptions().use_intra_process_comms(intra_process_comms)) {}
+        using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
-  virtual ~RrJoystickNode() = default;
-};
+        /**
+         * @class RrJoystickNode
+         * @brief using transport driver plugin validate inbound messages, and write valid messages to [namespace]/joy topic
+         */
+        class RrJoystickNode : public rclcpp_lifecycle::LifecycleNode
+        {
+          public:
+            explicit RrJoystickNode(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
+                : rclcpp_lifecycle::LifecycleNode("rr_joystick_node", options)
+            {}
 
-}  // namespace rr_joystick
-}
-#endif  // RR_JOYSTICK__RR_JOYSTICK_HPP_
+            virtual ~RrJoystickNode() = default;
+
+            CallbackReturn on_configure(const rclcpp_lifecycle::State &state) override;
+
+            CallbackReturn on_activate(const rclcpp_lifecycle::State &state) override;
+
+            CallbackReturn on_deactivate(const rclcpp_lifecycle::State &state) override;
+
+            CallbackReturn on_cleanup(const rclcpp_lifecycle::State &state) override;
+
+          private:
+            // when invalid is recieved callback will call trigger_error_transition(), this will
+            // a state change, and it will be update to lifecycle node to determine what to do with
+            // the event.
+            void publish_callback();
+            rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Joy>::SharedPtr publisher_ = nullptr;
+        };
+
+    } // namespace rr_joystick
+} // namespace rrobot
+#endif // RR_JOYSTICK__RR_JOYSTICK_HPP_
