@@ -13,6 +13,7 @@ find_package(rr_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(rclcpp_components REQUIRED)
+find_package(pluginlib REQUIRED)
 
 add_library(rr_joystick_node src/rr_joystick_node.cpp)
 add_library(rr_joystick_node::rr_joystick_node ALIAS rr_joystick_node)
@@ -28,6 +29,7 @@ target_link_libraries(
   ${rclcpp_TARGETS}
   ${rclcpp_lifecycle_TARGETS}
   ${rclcpp_components_TARGETS}
+  ${pluginlib_TARGETS}
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,

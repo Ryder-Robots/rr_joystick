@@ -20,41 +20,72 @@
 
 #include "rr_joystick/rr_joystick_node.hpp"
 
+using namespace std::placeholders;
+
 namespace rrobot::rr_joystick
 {
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
-    CallbackReturn RrJoystickNode::on_configure(const rclcpp_lifecycle::State &state)
+    /**
+     * Default to UDP plugin, for joysticks this will probally always be true.
+     */
+    CallbackReturn RRJoystickNode::on_configure(const rclcpp_lifecycle::State &state)
     {
         (void)state;
-        return CallbackReturn::SUCCESS;
+        RCLCPP_INFO(this->get_logger(), "configuring %s", this->get_name());
+
+        // configure plugin first. default to UDP plugin
+        declare_parameter("transport_plugin", "rr_joy_udp_plugin");
+        pluginlib::ClassLoader<rrobots::interfaces::RrNodeJoyPluginIface> poly_loader("polygon_base", "rrobots::interfaces::RrNodeJoyPluginIface");
+        try {
+            transport_ = poly_loader.createSharedInstance(this->get_parameter("transport_plugin").as_string());
+        }
+        catch (pluginlib::PluginlibException &ex) {
+            RCLCPP_FATAL(this->get_logger(), "could not load transport plugin: %s", this->get_parameter("transport_plugin").as_string().c_str());
+            return CallbackReturn::ERROR;
+        }
+
+        // create callback
+        auto cb = std::bind(&RRJoystickNode::publish_callback, this, _1);
+
+        // create publisher
+        publisher_ = this->create_publisher<sensor_msgs::msg::Joy>("/joy", 10);
+
+        return transport_->configure(state, cb, this->shared_from_this());
     }
 
-    CallbackReturn RrJoystickNode::on_activate(const rclcpp_lifecycle::State &state)
+    CallbackReturn RRJoystickNode::on_activate(const rclcpp_lifecycle::State &state)
+    {
+        return transport_->on_activate(state);
+    }
+
+
+    CallbackReturn RRJoystickNode::on_deactivate(const rclcpp_lifecycle::State &state)
     {
         (void)state;
-        return CallbackReturn::SUCCESS;
+        if (publisher_ != nullptr) {
+            publisher_.reset();
+        }
+        return transport_->on_deactivate(state);
     }
 
-
-    CallbackReturn RrJoystickNode::on_deactivate(const rclcpp_lifecycle::State &state)
+    CallbackReturn RRJoystickNode::on_cleanup(const rclcpp_lifecycle::State &state)
     {
         (void)state;
-        return CallbackReturn::SUCCESS;
+        if (publisher_ != nullptr) {
+            publisher_.reset();
+        }
+        return transport_->on_cleanup(state);
     }
 
-    CallbackReturn RrJoystickNode::on_cleanup(const rclcpp_lifecycle::State &state)
-    {
-        (void)state;
-        return CallbackReturn::SUCCESS;
-    }
-    
     // when invalid is recieved callback will call trigger_error_transition(), this will
     // a state change, and it will be update to lifecycle node to determine what to do with
     // the event.
-    void RrJoystickNode::publish_callback()
+    void RRJoystickNode::publish_callback(const sensor_msgs::msg::Joy &joy)
     {
+        // perform data sanitation here.
+        publisher_->publish(joy);
     }
 } // namespace rrobot::rr_joystick
 
-RCLCPP_COMPONENTS_REGISTER_NODE(rrobot::rr_joystick::RrJoystickNode);
+RCLCPP_COMPONENTS_REGISTER_NODE(rrobot::rr_joystick::RRJoystickNode);

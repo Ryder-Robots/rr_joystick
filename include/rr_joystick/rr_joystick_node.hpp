@@ -21,11 +21,14 @@
 #ifndef RR_JOYSTICK__RR_JOYSTICK_HPP_
 #define RR_JOYSTICK__RR_JOYSTICK_HPP_
 
+#include <memory>
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rr_joystick/visibility_control.h"
 #include "sensor_msgs/msg/joy.hpp"
+#include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include <rclcpp_components/register_node_macro.hpp>
+#include <pluginlib/class_loader.hpp>
 
 namespace rrobot
 {
@@ -38,27 +41,55 @@ namespace rrobot
          * @class RrJoystickNode
          * @brief using transport driver plugin validate inbound messages, and write valid messages to [namespace]/joy topic
          */
-        class RrJoystickNode : public rclcpp_lifecycle::LifecycleNode
+        class RRJoystickNode : public rclcpp_lifecycle::LifecycleNode
         {
           public:
-            explicit RrJoystickNode(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
+            explicit RRJoystickNode(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
                 : rclcpp_lifecycle::LifecycleNode("rr_joystick_node", options)
             {}
 
-            virtual ~RrJoystickNode() = default;
+            virtual ~RRJoystickNode() = default;
 
+            /**
+             * @fn on_configure
+             * @brief performs configuration.
+             * 
+             * Sets up callback and transport plugin.
+             */
             CallbackReturn on_configure(const rclcpp_lifecycle::State &state) override;
 
+            /**
+             * @fn on_activate
+             * @brief activates transport, and publisher
+             */
             CallbackReturn on_activate(const rclcpp_lifecycle::State &state) override;
 
+            /**
+             * @fn on_deactivate
+             * @brief resets callback, and calls on_deactivate on transport plugin
+             */
             CallbackReturn on_deactivate(const rclcpp_lifecycle::State &state) override;
 
+            /**
+             * @fn on_cleanup
+             * @brief  resets callback, and calls on_cleanup on transport plugin
+             */
             CallbackReturn on_cleanup(const rclcpp_lifecycle::State &state) override;
 
-          private:
+            /**
+             * @fn publish_callback
+             * @brief called by transport layer when new Joy event arrives
+             * 
+             * When new joy event arrives, perform data sanitisation check. If there is any
+             * issues with the data then call trigger_error_transition(), the lifecycle manager
+             * will decide how this transition should be handled.
+             */
+            void publish_callback(const sensor_msgs::msg::Joy& joy);
 
-            void publish_callback();
+          private:
             rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Joy>::SharedPtr publisher_ = nullptr;
+            std::shared_ptr<rrobots::interfaces::RrNodeJoyPluginIface> transport_ = nullptr;
+
         };
 
     } // namespace rr_joystick
