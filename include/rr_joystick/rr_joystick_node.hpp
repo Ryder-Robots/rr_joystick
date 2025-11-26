@@ -26,10 +26,10 @@
 #include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include "rr_joystick/visibility_control.h"
 #include "sensor_msgs/msg/joy.hpp"
+#include <lifecycle_msgs/msg/transition.hpp>
 #include <memory>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
-#include <lifecycle_msgs/msg/transition.hpp>
 
 namespace rrobot
 {
@@ -46,7 +46,8 @@ namespace rrobot
         {
           public:
             explicit RRJoystickNode(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
-                : rclcpp_lifecycle::LifecycleNode("rr_joystick_node", options)
+                : rclcpp_lifecycle::LifecycleNode("rr_joystick_node", options),
+                  poly_loader_("rr_common_base", "rrobots::interfaces::RrNodeJoyPluginIface")
             {}
 
             ~RRJoystickNode() = default;
@@ -100,6 +101,7 @@ namespace rrobot
           private:
             rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Joy>::SharedPtr publisher_ = nullptr;
             std::shared_ptr<rrobots::interfaces::RrNodeJoyPluginIface> transport_ = nullptr;
+            pluginlib::ClassLoader<rrobots::interfaces::RrNodeJoyPluginIface> poly_loader_;
 
             // constants used for validation.
             static constexpr size_t BUTTONS_SZ = 20;

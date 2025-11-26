@@ -38,9 +38,13 @@ namespace rrobot::rr_joystick
         declare_parameter("transport_plugin", "rr_joy_udp_plugin");
         std::string plugin_param = this->get_parameter("transport_plugin").as_string();
         RCLCPP_DEBUG(this->get_logger(), "transport plugin is '%s'", plugin_param.c_str());
-        pluginlib::ClassLoader<rrobots::interfaces::RrNodeJoyPluginIface> poly_loader("rr_common_base", "rrobots::interfaces::RrNodeJoyPluginIface");
         try {
-            transport_ = poly_loader.createSharedInstance(plugin_param);
+            transport_ = poly_loader_.createSharedInstance(plugin_param);
+
+            if (transport_ == nullptr) {
+                RCLCPP_ERROR(this->get_logger(), "unable to create plugin");
+                return CallbackReturn::ERROR;
+            }
         }
         catch (pluginlib::PluginlibException &ex) {
             RCLCPP_FATAL(this->get_logger(), "could not load transport plugin: %s", this->get_parameter("transport_plugin").as_string().c_str());
@@ -52,8 +56,9 @@ namespace rrobot::rr_joystick
 
         // create publisher
         publisher_ = this->create_publisher<sensor_msgs::msg::Joy>("/joy", rclcpp::QoS(10).best_effort());
+        auto self_shared = this->shared_from_this();
 
-        return transport_->configure(state, cb, this->shared_from_this());
+        return transport_->configure(state, cb, self_shared);
     }
 
     CallbackReturn RRJoystickNode::on_activate(const rclcpp_lifecycle::State &state)
