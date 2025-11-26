@@ -36,9 +36,11 @@ namespace rrobot::rr_joystick
 
         // configure plugin first. default to UDP plugin
         declare_parameter("transport_plugin", "rr_joy_udp_plugin");
-        pluginlib::ClassLoader<rrobots::interfaces::RrNodeJoyPluginIface> poly_loader("polygon_base", "rrobots::interfaces::RrNodeJoyPluginIface");
+        std::string plugin_param = this->get_parameter("transport_plugin").as_string();
+        RCLCPP_DEBUG(this->get_logger(), "transport plugin is '%s'", plugin_param.c_str());
+        pluginlib::ClassLoader<rrobots::interfaces::RrNodeJoyPluginIface> poly_loader("rr_common_base", "rrobots::interfaces::RrNodeJoyPluginIface");
         try {
-            transport_ = poly_loader.createSharedInstance(this->get_parameter("transport_plugin").as_string());
+            transport_ = poly_loader.createSharedInstance(plugin_param);
         }
         catch (pluginlib::PluginlibException &ex) {
             RCLCPP_FATAL(this->get_logger(), "could not load transport plugin: %s", this->get_parameter("transport_plugin").as_string().c_str());
@@ -49,13 +51,14 @@ namespace rrobot::rr_joystick
         auto cb = std::bind(&RRJoystickNode::publish_callback, this, _1);
 
         // create publisher
-        publisher_ = this->create_publisher<sensor_msgs::msg::Joy>("/joy", 10);
+        publisher_ = this->create_publisher<sensor_msgs::msg::Joy>("/joy", rclcpp::QoS(10).best_effort());
 
         return transport_->configure(state, cb, this->shared_from_this());
     }
 
     CallbackReturn RRJoystickNode::on_activate(const rclcpp_lifecycle::State &state)
     {
+        publisher_->on_activate();
         return transport_->on_activate(state);
     }
 
@@ -64,7 +67,7 @@ namespace rrobot::rr_joystick
     {
         (void)state;
         if (publisher_ != nullptr) {
-            publisher_.reset();
+            publisher_->on_deactivate();
         }
         return transport_->on_deactivate(state);
     }
@@ -78,12 +81,51 @@ namespace rrobot::rr_joystick
         return transport_->on_cleanup(state);
     }
 
+    bool RRJoystickNode::validate(const sensor_msgs::msg::Joy &joy)
+    {
+        if (joy.axes.size() > AXES_SZ) {
+            RCLCPP_ERROR(this->get_logger(),
+                "axes size is greater than max AXES_SZ, ignoring values excess values");
+            return false;
+        }
+        if (joy.buttons.size() > BUTTONS_SZ) {
+            RCLCPP_ERROR(this->get_logger(),
+                "buttons size is greater than max AXES_SZ, ignoring values excess "
+                "values");
+
+            return false;
+        }
+        // validate max and min values
+        for (float i : joy.axes) {
+            if (i > MAX_AXES || i < MIN_AXES) {
+                RCLCPP_ERROR(this->get_logger(), "axes is not within threshold range");
+                return false;
+            }
+        }
+
+        // validate max and min values
+        for (int i : joy.buttons) {
+            if (i > MAX_BUTTON || i < MIN_BUTTON) {
+                RCLCPP_ERROR(this->get_logger(), "button is not within threshold range");
+                return false;
+            }
+        }
+        return true;
+    }
+
     // when invalid is recieved callback will call trigger_error_transition(), this will
     // a state change, and it will be update to lifecycle node to determine what to do with
     // the event.
     void RRJoystickNode::publish_callback(const sensor_msgs::msg::Joy &joy)
     {
         // perform data sanitation here.
+
+        if (!validate(joy)) {
+            RCLCPP_ERROR(this->get_logger(), "joy event failed sanitisation");
+            this->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ON_ACTIVATE_ERROR);
+            return;
+        }
+
         publisher_->publish(joy);
     }
 } // namespace rrobot::rr_joystick

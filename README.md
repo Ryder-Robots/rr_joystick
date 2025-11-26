@@ -14,9 +14,12 @@ Run the node within your ROS2 workspace, making sure the joystick device is corr
 
 Example command to run the node (replace `[namespace]` with your robot's namespace):
 
+
 ```bash
-ros2 run rr_joystick rr_joystick_node --ros-args -p transport_plugin:=rr_joy_udp_plugin
-ros2 lifecycle list /rr_joystick_node
+ros2 ros2 run rr_joystick rr_joystick_pub --ros-args  -p transport_plugin:=rr_joy_udp_plugin
+```
+
+```bash
 ros2 lifecycle set /rr_joystick_node configure
 ros2 lifecycle set /rr_joystick_node activate
 ```
@@ -28,6 +31,14 @@ ros2 lifecycle set /rr_joystick_node deactivate
 ros2 lifecycle set /rr_joystick_node cleanup
 ros2 lifecycle set /rr_joystick_node shutdown
 ```
+
+## Development
+
+Command for compiling in debug mode:
+
+```bash
+colcon build --packages-select rr_joystick --cmake-args -DCMAKE_BUILD_TYPE=Debug
+ros2 run --prefix 'gdbserver localhost:3000' rr_joystick rr_joystick_pub --ros-args --log-level debug  -p transport_plugin:=rr_joy_udp_plugin
 
 ## Transport Plugin
 

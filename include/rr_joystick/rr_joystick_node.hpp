@@ -21,14 +21,15 @@
 #ifndef RR_JOYSTICK__RR_JOYSTICK_HPP_
 #define RR_JOYSTICK__RR_JOYSTICK_HPP_
 
-#include <memory>
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include "rr_joystick/visibility_control.h"
 #include "sensor_msgs/msg/joy.hpp"
-#include "rr_common_base/rr_node_joy_plugin_iface.hpp"
-#include <rclcpp_components/register_node_macro.hpp>
+#include <memory>
 #include <pluginlib/class_loader.hpp>
+#include <rclcpp_components/register_node_macro.hpp>
+#include <lifecycle_msgs/msg/transition.hpp>
 
 namespace rrobot
 {
@@ -48,7 +49,7 @@ namespace rrobot
                 : rclcpp_lifecycle::LifecycleNode("rr_joystick_node", options)
             {}
 
-            virtual ~RRJoystickNode() = default;
+            ~RRJoystickNode() = default;
 
             /**
              * @fn on_configure
@@ -84,12 +85,29 @@ namespace rrobot
              * issues with the data then call trigger_error_transition(), the lifecycle manager
              * will decide how this transition should be handled.
              */
-            void publish_callback(const sensor_msgs::msg::Joy& joy);
+            void publish_callback(const sensor_msgs::msg::Joy &joy);
+
+            /**
+             * @fn validate
+             * @param joy (current joy getting validated)
+             * @brief validates joy object to ensure that the values are all sain.
+             * @return true if valid, otherwise false
+             * 
+             * This routine is designed to run in conjuction with publish_callback.
+             */
+            bool validate(const sensor_msgs::msg::Joy &joy);
 
           private:
             rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Joy>::SharedPtr publisher_ = nullptr;
             std::shared_ptr<rrobots::interfaces::RrNodeJoyPluginIface> transport_ = nullptr;
 
+            // constants used for validation.
+            static constexpr size_t BUTTONS_SZ = 20;
+            static constexpr size_t AXES_SZ = 5;
+            static constexpr int MAX_BUTTON = 1;
+            static constexpr int MIN_BUTTON = 0;
+            static constexpr float MAX_AXES = 1;
+            static constexpr float MIN_AXES = -1;
         };
 
     } // namespace rr_joystick

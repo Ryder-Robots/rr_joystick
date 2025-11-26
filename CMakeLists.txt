@@ -14,40 +14,32 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(ament_cmake_auto REQUIRED)
+ament_auto_find_build_dependencies()
 
-add_library(rr_joystick_node src/rr_joystick_node.cpp)
-add_library(rr_joystick_node::rr_joystick_node ALIAS rr_joystick_node)
-target_compile_features(rr_joystick_node PUBLIC cxx_std_17)  # Require C99 and C++17
-target_include_directories(rr_joystick_node PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
-target_link_libraries(
-  rr_joystick_node PUBLIC
-  ${rr_common_base_TARGETS}
-  ${rr_common_plugins_TARGETS}
-  ${rr_interfaces_TARGETS}
-  ${rclcpp_TARGETS}
-  ${rclcpp_lifecycle_TARGETS}
-  ${rclcpp_components_TARGETS}
-  ${pluginlib_TARGETS}
+ament_auto_add_library(${PROJECT_NAME}_node SHARED
+  src/rr_joystick_node.cpp)
+  
+ament_target_dependencies(${PROJECT_NAME}_node
+  rr_common_base
+  rr_interfaces
+  rclcpp
+  rclcpp_lifecycle
+  rclcpp_components
+  pluginlib
 )
 
-# Causes the visibility macros to use dllexport rather than dllimport,
-# which is appropriate when building the dll but not consuming it.
-target_compile_definitions(rr_joystick_node PRIVATE "RR_JOYSTICK_BUILDING_LIBRARY")
-
-install(
-  DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME}
+rclcpp_components_register_node(${PROJECT_NAME}_node
+  PLUGIN "rrobot::rr_joystick::RRJoystickNode"
+  EXECUTABLE "rr_joystick_pub"
 )
 install(
-  TARGETS rr_joystick_node
-  EXPORT export_${PROJECT_NAME}
+  TARGETS ${PROJECT_NAME}_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
-  DESTINATION lib/${PROJECT_NAME}
 )
+# ament_export_targets(${PROJECT_NAME}_node HAS_LIBRARY_TARGET)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -61,14 +53,6 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_export_include_directories(
-  "include/${PROJECT_NAME}"
-)
-ament_export_libraries(
-  rr_joystick_node
-)
-ament_export_targets(
-  export_${PROJECT_NAME}
-)
+
 
 ament_package()
