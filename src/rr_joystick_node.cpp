@@ -130,7 +130,7 @@ namespace rrobot::rr_joystick
             this->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ON_ACTIVATE_ERROR);
             return;
         }
-
+        RCLCPP_DEBUG(this->get_logger(), "publishing joy message");
         publisher_->publish(joy);
     }
 } // namespace rrobot::rr_joystick
