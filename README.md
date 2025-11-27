@@ -16,7 +16,7 @@ Example command to run the node (replace `[namespace]` with your robot's namespa
 
 
 ```bash
-ros2 ros2 run rr_joystick rr_joystick_pub --ros-args  -p transport_plugin:=rr_joy_udp_plugin
+ros2 run rr_joystick rr_joystick_pub --ros-args --log-level DEBUG   -p transport_plugin:=rr_joy_udp_plugin 
 ```
 
 ```bash
